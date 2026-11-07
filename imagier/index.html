@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Imagier · Outils Logo</title>
+<meta name="description" content="Imagier pour logopèdes : des illustrations claires sur fond blanc, une banque partagée et des jeux à imprimer (imagier, memory, loto).">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f4f2f9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d0a12" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Outils Logo">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%238648d6'/%3E%3Crect x='14' y='14' width='16' height='16' rx='4' fill='%23fff'/%3E%3Crect x='34' y='14' width='16' height='16' rx='4' fill='%2334c759'/%3E%3Crect x='14' y='34' width='16' height='16' rx='4' fill='%2334c759'/%3E%3Crect x='34' y='34' width='16' height='16' rx='4' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&display=swap">
+<style>
+/* Layout : app iOS en une colonne — grand titre, carte « Créer », banque en grille, barre de sélection en verre, feuille d'impression. */
+:root {
+  --bg: #f4f2f9; --surface: #ffffff; --fill: #eeeaf6; --fill-2: #e2dcee; --thumb: #ffffff;
+  --ink: #1b1625; --muted: #6c6479; --faint: #9a93a6; --line: rgba(40, 20, 80, 0.12);
+  --accent: #8648d6; --accent-ink: #6f35bd; --on-accent: #ffffff; --accent-soft: #efe6fb;
+  --green: #187a39; --green-fill: #34c759; --green-soft: #e2f4e7; --warn: #b4531c; --warn-soft: #fbeee4;
+  --glass: rgba(255, 255, 255, 0.76); --shadow: 0 1px 2px rgba(30, 10, 60, 0.05), 0 10px 30px rgba(30, 10, 60, 0.06);
+  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-card: "Andika", ui-rounded, "SF Pro Rounded", "Arial Rounded MT Bold", "Trebuchet MS", sans-serif;
+  --ease: cubic-bezier(0.32, 0.72, 0, 1);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d0a12; --surface: #1a1622; --fill: #25202f; --fill-2: #322b3e; --thumb: #3d3549;
+    --ink: #f3eff9; --muted: #a59db3; --faint: #7a7288; --line: rgba(230, 210, 255, 0.12);
+    --accent: #b58af6; --accent-ink: #c9a6fb; --on-accent: #1d1030; --accent-soft: #2b2040;
+    --green: #5ad183; --green-fill: #30d158; --green-soft: #183224; --warn: #f2a46f; --warn-soft: #3a2619;
+    --glass: rgba(32, 27, 41, 0.76); --shadow: 0 0 0 0.5px rgba(230, 210, 255, 0.08);
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html { background: var(--bg); -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; min-height: 100dvh; background: var(--bg); color: var(--ink); font: 400 16px/1.45 var(--font-ui); -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+[hidden] { display: none !important; }
+button, input, select { font: inherit; color: inherit; }
+button { touch-action: manipulation; -webkit-user-select: none; user-select: none; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.app { max-width: 980px; margin: 0 auto; display: grid; gap: 16px; padding-block: calc(env(safe-area-inset-top, 0px) + 28px) calc(env(safe-area-inset-bottom, 0px) + 120px); }
+.top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding: 0 4px; }
+.eyebrow { margin: 0 0 4px; font-size: 13px; font-weight: 600; color: var(--accent-ink); }
+h1 { margin: 0; font: 700 34px/1.08 var(--font-display); letter-spacing: -0.022em; }
+h2 { margin: 0; font: 700 22px/1.2 var(--font-display); letter-spacing: -0.015em; }
+.pill { font: 600 13px/1 var(--font-ui); padding: 8px 11px; border-radius: 999px; background: var(--green-soft); color: var(--green); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pill.off { background: var(--fill); color: var(--muted); }
+.card { background: var(--surface); border-radius: 22px; padding: 16px; box-shadow: var(--shadow); min-width: 0; }
+.btn {
+  appearance: none; border: 0; border-radius: 999px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 10px 16px; font: 600 15px/1 var(--font-ui); background: var(--fill); color: var(--ink); transition: transform 0.12s ease-out, opacity 0.2s;
+}
+.btn:active:not(:disabled) { transform: scale(0.96); }
+.btn:disabled { opacity: 0.4; cursor: default; }
+.btn.primary { background: var(--accent); color: var(--on-accent); }
+.btn.sm { padding: 8px 12px; font-size: 14px; }
+.btn.plain { background: transparent; color: var(--accent-ink); padding-inline: 8px; }
+.btn.warn { background: var(--warn-soft); color: var(--warn); }
+.field { width: 100%; min-width: 0; border: 0; border-radius: 12px; background: var(--fill); padding: 12px 14px; font-size: 17px; color: var(--ink); }
+.field::placeholder { color: var(--faint); }
+.make { display: flex; gap: 10px; }
+.make .field { flex: 1; }
+.note { margin: 8px 4px 0; font-size: 13px; color: var(--muted); }
+.coderow { display: flex; gap: 10px; margin-top: 10px; }
+.coderow .field { flex: 1; }
+.msg { margin: 10px 4px 0; font-size: 14px; font-weight: 600; }
+.msg.err { color: var(--warn); }
+.msg.ok { color: var(--green); }
+.result { display: grid; grid-template-columns: minmax(0, 260px) minmax(0, 1fr); gap: 16px; align-items: center; margin-top: 14px; }
+.result .frame { aspect-ratio: 1; border-radius: 18px; background: #fff; overflow: hidden; display: grid; place-items: center; box-shadow: 0 0 0 0.5px var(--line) inset; max-width: 100%; }
+.result img { width: 100%; height: 100%; object-fit: contain; }
+.result .word { font: 700 30px/1.15 var(--font-card); margin: 0 0 12px; overflow-wrap: anywhere; }
+.result .acts { display: flex; flex-wrap: wrap; gap: 8px; }
+.spin { width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--fill-2); border-top-color: var(--accent); animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.bank-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.count { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.filters { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
+.son { display: flex; align-items: center; gap: 8px; }
+.son .field { width: 84px; text-align: center; }
+.segctl { display: inline-grid; grid-auto-flow: column; background: var(--fill); border-radius: 10px; padding: 2px; }
+.segctl button { border: 0; background: none; border-radius: 8px; padding: 8px 10px; font: 500 14px/1 var(--font-ui); cursor: pointer; color: var(--ink); white-space: nowrap; }
+.segctl button[aria-pressed="true"] { background: var(--thumb); font-weight: 600; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
+.chips { display: flex; gap: 8px; overflow-x: auto; padding: 12px 2px 4px; margin: 0 -2px; scrollbar-width: none; overscroll-behavior-x: contain; }
+.chips::-webkit-scrollbar { display: none; }
+.chip { flex: none; border: 0; border-radius: 999px; padding: 8px 13px; font: 600 14px/1 var(--font-ui); background: var(--fill); color: var(--ink); cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 12px; margin-top: 12px; }
+.tile { position: relative; border: 0; padding: 0; background: none; cursor: pointer; text-align: center; min-width: 0; transition: transform 0.12s ease-out; }
+.tile:active { transform: scale(0.97); }
+.tile .im { aspect-ratio: 1; border-radius: 16px; background: #fff; overflow: hidden; box-shadow: 0 0 0 0.5px var(--line) inset; display: grid; place-items: center; }
+.tile .im img { width: 100%; height: 100%; object-fit: contain; }
+.tile .lb { display: block; margin-top: 6px; font: 700 16px/1.2 var(--font-card); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tile.todo .im { background: transparent; box-shadow: none; border: 1.5px dashed var(--fill-2); color: var(--accent-ink); font: 600 14px/1.2 var(--font-ui); }
+.tile.todo .lb { color: var(--muted); }
+.tile .tick {
+  position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+  background: rgba(255, 255, 255, 0.9); box-shadow: 0 0 0 1.5px rgba(40, 20, 80, 0.25) inset; color: transparent;
+}
+.tile.sel .tick { background: var(--green-fill); box-shadow: none; color: #fff; }
+.tile.sel .im { box-shadow: 0 0 0 3px var(--green-fill) inset; }
+.empty { grid-column: 1 / -1; padding: 24px 8px; text-align: center; color: var(--muted); font-size: 15px; }
+
+.selbar {
+  position: fixed; z-index: 20; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); margin: 0 auto;
+  width: min(940px, calc(100% - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
+  display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 16px; border-radius: 28px;
+  background: var(--glass); -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: 0 10px 34px rgba(20, 0, 50, 0.18), 0 0 0 0.5px var(--line);
+}
+.selbar .n { flex: 1; min-width: 0; font-weight: 600; font-size: 15px; }
+.sheet-wrap { position: fixed; inset: 0; z-index: 40; }
+.scrim { position: absolute; inset: 0; background: rgba(12, 0, 30, 0.36); opacity: 0; transition: opacity 0.3s; }
+.sheet {
+  position: absolute; left: 0; right: 0; bottom: 0; margin: 0 auto; max-width: 620px; background: var(--surface); border-radius: 24px 24px 0 0;
+  padding: 10px max(18px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 18px) max(18px, env(safe-area-inset-left, 0px));
+  transform: translateY(100%); transition: transform 0.42s var(--ease); display: grid; gap: 14px;
+}
+.sheet-wrap.open .scrim { opacity: 1; }
+.sheet-wrap.open .sheet { transform: none; }
+.grab { width: 36px; height: 5px; border-radius: 3px; background: var(--fill-2); margin: 0 auto; }
+.opt { display: grid; gap: 8px; }
+.opt > span { font-size: 13px; font-weight: 600; color: var(--muted); }
+.opt .segctl { display: grid; grid-auto-columns: 1fr; }
+.foot { padding: 0 6px; font-size: 13px; color: var(--muted); max-width: 70ch; display: grid; gap: 6px; }
+.foot p { margin: 0; }
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover:not(:disabled) { filter: brightness(0.97); }
+  .tile:hover .im { box-shadow: 0 0 0 2px var(--accent-soft) inset; }
+  .tile.sel:hover .im { box-shadow: 0 0 0 3px var(--green-fill) inset; }
+}
+@media (max-width: 560px) {
+  h1 { font-size: 30px; }
+  .result { grid-template-columns: 1fr; }
+  .result .frame { width: min(100%, 320px); margin: 0 auto; }
+  .filters { grid-template-columns: 1fr; }
+  .grid { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 10px; }
+  .tile .lb { font-size: 15px; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; } }
+@media (prefers-reduced-transparency: reduce) { .selbar { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; } }
+
+/* Impression A4 */
+#print { display: none; }
+@page { size: A4; margin: 10mm; }
+@media print {
+  html, body { background: #fff !important; padding: 0 !important; }
+  body > *:not(#print) { display: none !important; }
+  #print { display: block; color: #111; }
+  .page { width: 190mm; height: 276mm; display: grid; gap: 4mm; align-content: start; break-after: page; page-break-after: always; overflow: hidden; }
+  .page:last-child { break-after: auto; page-break-after: auto; }
+  .pc { border: 0.4mm dashed #999; border-radius: 3mm; display: grid; grid-template-rows: minmax(0, 1fr) auto; padding: 2mm; overflow: hidden; }
+  .pc img { width: 100%; height: 100%; object-fit: contain; min-height: 0; }
+  .pc b { font: 700 6.5mm/1.1 var(--font-card); text-align: center; padding-top: 1mm; }
+  .board { border: 0.6mm solid #333; border-radius: 4mm; padding: 4mm; display: grid; gap: 2mm; }
+  .board .pc { border-style: solid; border-color: #bbb; }
+  .ptitle { font: 700 5mm/1 var(--font-card); margin: 0 0 2mm; }
+}
+
+/* Barre commune Outils Logo : logo + bascule entre les deux outils. */
+.suite { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 4px; margin-bottom: 4px; }
+.suite-home { display: inline-flex; align-items: center; gap: 8px; font: 600 15px/1 var(--font-ui); color: var(--ink); text-decoration: none; letter-spacing: -0.01em; }
+.suite-home i { width: 24px; height: 24px; border-radius: 7px; background: var(--accent); display: grid; place-items: center; }
+.suite-home i::after { content: ""; width: 9px; height: 9px; border-radius: 3px; background: var(--green-fill); box-shadow: 0 0 0 2px var(--on-accent); }
+.suite-tabs { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--fill); }
+.suite-tabs a { padding: 8px 14px; border-radius: 999px; font: 600 14px/1 var(--font-ui); color: var(--muted); text-decoration: none; transition: color 0.2s var(--ease), background-color 0.2s var(--ease); }
+.suite-tabs a:hover { color: var(--ink); }
+.suite-tabs a[aria-current="page"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(30, 10, 60, 0.08), 0 3px 10px rgba(30, 10, 60, 0.08); }
+@media (max-width: 400px) { .suite-home span { display: none; } .suite-tabs a { padding-inline: 12px; } }
+</style>
+</head>
+<body>
+<main class="app">
+  <nav class="suite" aria-label="Outils Logo">
+    <a class="suite-home" href="../" aria-label="Outils Logo, accueil"><i aria-hidden="true"></i><span>Outils Logo</span></a>
+    <div class="suite-tabs"><a href="../transcription/">Transcription</a><a href="../imagier/" aria-current="page">Imagier</a></div>
+  </nav>
+  <header class="top">
+    <div>
+      <p class="eyebrow">Pour les logopèdes</p>
+      <h1>Imagier</h1>
+    </div>
+    <span class="pill off" id="quota">…</span>
+  </header>
+
+  <section class="card" aria-label="Créer une image">
+    <form class="make" id="makeForm" autocomplete="off">
+      <input class="field" id="word" type="text" placeholder="Un mot à illustrer, ex. brosse à dents" maxlength="60" enterkeyhint="go" aria-label="Mot à illustrer">
+      <button class="btn primary" id="makeBtn" type="submit">Créer</button>
+    </form>
+    <div class="coderow" id="codeRow" hidden>
+      <input class="field" id="code" type="password" placeholder="Code d'accès pour créer" autocomplete="off" enterkeyhint="go" aria-label="Code d'accès">
+      <button class="btn" id="codeOk" type="button">Valider</button>
+    </div>
+    <p class="note">Si le mot existe déjà dans la banque, l'image s'affiche tout de suite. Créer une nouvelle image demande le code d'accès. Pour préciser le sens, ajoutez-le entre parenthèses : avocat (le fruit).</p>
+    <p class="msg" id="msg" hidden></p>
+    <div class="result" id="result" hidden>
+      <div class="frame" id="frame"></div>
+      <div>
+        <p class="word" id="rWord"></p>
+        <div class="acts">
+          <button class="btn primary sm" id="rSel" type="button">Ajouter à la sélection</button>
+          <button class="btn sm" id="rDl" type="button">Télécharger</button>
+          <button class="btn sm" id="rAgain" type="button">Refaire l'image</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" aria-label="Banque d'images">
+    <div class="bank-head"><h2>La banque</h2><span class="count" id="count"></span></div>
+    <div class="filters">
+      <input class="field" id="q" type="search" placeholder="Chercher un mot" aria-label="Chercher un mot">
+      <div class="son">
+        <input class="field" id="son" type="text" placeholder="Son" maxlength="4" autocapitalize="none" aria-label="Son ou lettres, ex. ch">
+        <div class="segctl" id="pos" role="group" aria-label="Position du son">
+          <button type="button" data-p="any" aria-pressed="true">Partout</button>
+          <button type="button" data-p="start" aria-pressed="false">Début</button>
+          <button type="button" data-p="end" aria-pressed="false">Fin</button>
+        </div>
+      </div>
+    </div>
+    <div class="chips" id="cats" role="group" aria-label="Catégories"></div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <footer class="foot">
+    <p>Les images sont dessinées par une IA (FLUX) puis gardées dans une banque partagée : chaque mot n'est dessiné qu'une fois, ensuite il est gratuit pour tout le monde.</p>
+    <p>Touchez une image pour l'agrandir, et le rond pour l'ajouter à la sélection. La sélection sert à imprimer un imagier, un memory ou un loto.</p>
+  </footer>
+</main>
+
+<div class="selbar" id="selbar" hidden>
+  <span class="n" id="selN"></span>
+  <button class="btn plain sm" id="selClear" type="button">Vider</button>
+  <button class="btn primary" id="selPrint" type="button">Imprimer…</button>
+</div>
+
+<div class="sheet-wrap" id="sheet" hidden>
+  <div class="scrim" id="scrim"></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="pTitle">
+    <div class="grab" aria-hidden="true"></div>
+    <h2 id="pTitle">Imprimer la sélection</h2>
+    <div class="opt"><span>Jeu</span>
+      <div class="segctl" id="pKind" role="group" aria-label="Jeu">
+        <button type="button" data-v="imagier" aria-pressed="true">Imagier</button>
+        <button type="button" data-v="memory" aria-pressed="false">Memory</button>
+        <button type="button" data-v="loto" aria-pressed="false">Loto</button>
+      </div>
+    </div>
+    <div class="opt"><span>Mot sous l'image</span>
+      <div class="segctl" id="pWord" role="group" aria-label="Mot sous l'image">
+        <button type="button" data-v="min" aria-pressed="true">minuscules</button>
+        <button type="button" data-v="maj" aria-pressed="false">MAJUSCULES</button>
+        <button type="button" data-v="none" aria-pressed="false">Sans mot</button>
+      </div>
+    </div>
+    <div class="opt" id="pBoardsRow" hidden><span>Planches de loto</span>
+      <div class="segctl" id="pBoards" role="group" aria-label="Nombre de planches">
+        <button type="button" data-v="2" aria-pressed="false">2</button>
+        <button type="button" data-v="4" aria-pressed="true">4</button>
+        <button type="button" data-v="6" aria-pressed="false">6</button>
+      </div>
+    </div>
+    <p class="note" id="pNote"></p>
+    <button class="btn primary" id="pGo" type="button">Imprimer</button>
+  </div>
+</div>
+
+<div id="print"></div>
+
+<script>
+(() => {
+  'use strict';
+  const SB = 'https://fgfcksnsvrsjfduxxncy.supabase.co';
+  const PK = 'sb_publishable_du6hADXFd_y4ltUJIiNgWA_fGIJtRcA';
+  const FN = SB + '/functions/v1/imagier';
+  const IMG = SB + '/storage/v1/object/public/imagier/';
+
+  // Suggestions de départ : mots courants en logopédie, par catégorie.
+  const STARTER = {
+    'Fruits et légumes': 'pomme, banane, poire, fraise, cerise, raisin, orange, citron, ananas, pastèque, carotte, tomate, salade, pomme de terre, petits pois, champignon',
+    'Animaux': 'chat, chien, lapin, cheval, vache, cochon, mouton, poule, canard, souris, lion, éléphant, girafe, singe, poisson, oiseau, papillon, escargot, serpent, ours',
+    'Maison': 'maison, porte, fenêtre, lit, chaise, table, lampe, clé, canapé, télévision, horloge, téléphone',
+    'Repas': 'pain, fromage, lait, œuf, gâteau, bonbon, verre, assiette, fourchette, cuillère, couteau, bol, soupe, pizza',
+    'Vêtements': 'chaussure, chaussette, pantalon, pull, robe, chapeau, bonnet, écharpe, manteau, gant, lunettes',
+    'Corps': 'main, pied, nez, bouche, œil, oreille, dent, cheveux, genou, ventre',
+    'Transports': 'voiture, vélo, bus, train, avion, bateau, camion, moto, fusée, tracteur',
+    'École': 'crayon, cahier, livre, ciseaux, colle, cartable, gomme, règle, tableau',
+    'Jouets': 'ballon, poupée, toupie, puzzle, cube, doudou, toboggan, balançoire',
+    'Salle de bain': 'brosse à dents, dentifrice, savon, serviette, baignoire, peigne, douche',
+    'Nature': 'soleil, lune, étoile, nuage, pluie, arbre, fleur, feuille, montagne, mer, neige'
+  };
+  const CATS = Object.keys(STARTER);
+  const catOf = {};
+  CATS.forEach((c) => STARTER[c].split(',').forEach((w) => { catOf[norm(w.trim())] = c; }));
+
+  const $ = (id) => document.getElementById(id);
+  const S = { bank: new Map(), sel: new Set(), cat: 'Tout', pos: 'any', cur: null, busy: false, kind: 'imagier', wordMode: 'min', boards: 4, armAgain: false };
+  window.__img = S;
+
+  function norm(w) { return String(w).normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60); }
+  const show = (w) => String(w).replace(/\s*\([^)]*\)\s*/g, ' ').trim();
+  const fold = (w) => show(w).toLowerCase().normalize('NFD').replace(/\p{M}/gu, '');
+  const url = (row) => IMG + encodeURIComponent(row.path);
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem('img-' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem('img-' + k, JSON.stringify(v)); } catch (e) {} }
+  };
+
+  function setMsg(t, kind) { const m = $('msg'); m.hidden = !t; m.textContent = t || ''; m.className = 'msg' + (kind ? ' ' + kind : ''); }
+  async function loadQuota() {
+    try {
+      const r = await fetch(FN, { headers: { apikey: PK } });
+      const d = await r.json();
+      const q = $('quota');
+      if (!d.ready) { q.textContent = 'Création bientôt active'; q.className = 'pill off'; }
+      else { q.textContent = d.used + ' / ' + d.limit + ' ce mois-ci'; q.className = 'pill' + (d.used >= d.limit ? ' off' : ''); }
+    } catch (e) {}
+  }
+  async function loadBank() {
+    try {
+      const r = await fetch(SB + '/rest/v1/imagier_images?select=key,label,cat,path,v,updated_at&order=label.asc', { headers: { apikey: PK } });
+      const rows = await r.json();
+      if (Array.isArray(rows)) { S.bank = new Map(rows.map((x) => [x.key, x])); }
+    } catch (e) {}
+    render();
+  }
+
+  // ---------- Création ----------
+  async function make(word, again) {
+    word = String(word || '').trim().replace(/\s+/g, ' ');
+    if (!word || S.busy) return;
+    const key = norm(word);
+    if (!key) { setMsg('Tapez un mot à illustrer.', 'err'); return; }
+    if (!again && S.bank.has(key)) { openRow(S.bank.get(key)); setMsg(''); return; }
+    S.busy = true; $('makeBtn').disabled = true;
+    $('result').hidden = false; $('frame').innerHTML = '<div class="spin" aria-label="Création en cours"></div>';
+    $('rWord').textContent = show(word); toggleActs(false);
+    setMsg(again ? 'Nouvelle version en cours…' : 'Dessin de « ' + show(word) + ' » en cours… (5 à 15 secondes)');
+    try {
+      const r = await fetch(FN, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: PK }, body: JSON.stringify({ word, again: !!again, cat: catOf[key] || null, code: store.get('code', '') }) });
+      const d = await r.json();
+      if (d.needCode) { $('codeRow').hidden = false; setTimeout(() => $('code').focus(), 50); }
+      if (!r.ok || !d.image) throw new Error(d.error || 'Erreur ' + r.status);
+      $('codeRow').hidden = true;
+      S.bank.set(d.image.key, d.image);
+      openRow(d.image);
+      setMsg(d.cached ? '' : 'Ajoutée à la banque.', 'ok');
+      render(); loadQuota();
+    } catch (e) {
+      $('frame').innerHTML = '';
+      $('result').hidden = true;
+      setMsg(String(e.message || e), 'err');
+    }
+    S.busy = false; $('makeBtn').disabled = false;
+  }
+  function toggleActs(on) { ['rSel', 'rDl', 'rAgain'].forEach((id) => { $(id).disabled = !on; }); }
+  function openRow(row) {
+    S.cur = row; S.armAgain = false;
+    $('result').hidden = false;
+    const im = new Image(); im.alt = show(row.label); im.src = url(row) + '?v=' + row.v;
+    $('frame').innerHTML = ''; $('frame').append(im);
+    $('rWord').textContent = show(row.label);
+    $('rAgain').textContent = "Refaire l'image"; $('rAgain').classList.remove('warn');
+    toggleActs(true); syncSelBtn();
+  }
+  function syncSelBtn() { if (S.cur) $('rSel').textContent = S.sel.has(S.cur.key) ? 'Retirer de la sélection' : 'Ajouter à la sélection'; }
+  $('makeForm').addEventListener('submit', (e) => { e.preventDefault(); make($('word').value); });
+  function useCode() { store.set('code', $('code').value.trim()); $('code').value = ''; make($('word').value || (S.cur && S.cur.label)); }
+  $('codeOk').addEventListener('click', useCode);
+  $('code').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); useCode(); } });
+  $('rSel').addEventListener('click', () => { if (S.cur) toggleSel(S.cur.key); });
+  $('rAgain').addEventListener('click', () => {
+    if (!S.cur) return;
+    if (!S.armAgain) { S.armAgain = true; $('rAgain').textContent = 'Confirmer (utilise 1 image du mois)'; $('rAgain').classList.add('warn'); return; }
+    make(S.cur.label, true);
+  });
+  $('rDl').addEventListener('click', async () => {
+    if (!S.cur) return;
+    try {
+      const b = await (await fetch(url(S.cur))).blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(b); a.download = show(S.cur.label) + '.' + (S.cur.path.split('.').pop() || 'png');
+      document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    } catch (e) { window.open(url(S.cur), '_blank'); }
+  });
+
+  // ---------- Banque ----------
+  function matches(label) {
+    const q = fold($('q').value.trim()), son = fold($('son').value.trim()), w = fold(label);
+    if (q && w.indexOf(q) < 0) return false;
+    if (son) {
+      if (S.pos === 'start' && !w.startsWith(son)) return false;
+      if (S.pos === 'end' && !(w.endsWith(son) || w.endsWith(son + 'e') || w.endsWith(son + 's') || w.endsWith(son + 'es'))) return false;
+      if (S.pos === 'any' && w.indexOf(son) < 0) return false;
+    }
+    return true;
+  }
+  function renderCats() {
+    const box = $('cats'); box.innerHTML = '';
+    ['Tout', 'Sélection'].concat(CATS).forEach((c) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'chip'; b.textContent = c; b.setAttribute('aria-pressed', String(S.cat === c));
+      b.addEventListener('click', () => { S.cat = c; renderCats(); render(); });
+      box.append(b);
+    });
+  }
+  function render() {
+    const grid = $('grid'); grid.innerHTML = '';
+    const items = [];
+    for (const row of S.bank.values()) {
+      const c = row.cat || catOf[row.key] || '';
+      if (S.cat === 'Sélection' ? !S.sel.has(row.key) : (S.cat !== 'Tout' && c !== S.cat)) continue;
+      if (!matches(row.label)) continue;
+      items.push({ row });
+    }
+    items.sort((a, b) => fold(a.row.label).localeCompare(fold(b.row.label), 'fr'));
+    const todo = [];
+    if (S.cat !== 'Sélection') {
+      (S.cat === 'Tout' ? CATS : [S.cat]).forEach((c) => STARTER[c].split(',').forEach((w) => {
+        w = w.trim();
+        if (!S.bank.has(norm(w)) && matches(w)) todo.push({ w, c });
+      }));
+    }
+    const frag = document.createDocumentFragment();
+    for (const it of items) frag.append(tile(it.row));
+    for (const t of todo) frag.append(todoTile(t.w, t.c));
+    if (!items.length && !todo.length) {
+      const e = document.createElement('p'); e.className = 'empty';
+      e.textContent = S.cat === 'Sélection' ? 'Aucune image sélectionnée. Touchez le rond d’une image pour l’ajouter.' : 'Aucun mot ne correspond. Tapez-le en haut pour le créer.';
+      frag.append(e);
+    }
+    grid.append(frag);
+    const n = S.bank.size;
+    $('count').textContent = n + ' image' + (n > 1 ? 's' : '') + ' dans la banque';
+    syncSelBar();
+  }
+  function tile(row) {
+    const b = document.createElement('div');
+    b.className = 'tile' + (S.sel.has(row.key) ? ' sel' : '');
+    b.setAttribute('role', 'button'); b.tabIndex = 0; b.setAttribute('aria-label', show(row.label));
+    const im = document.createElement('span'); im.className = 'im';
+    const img = new Image(); img.loading = 'lazy'; img.alt = ''; img.src = url(row) + '?v=' + row.v;
+    im.append(img);
+    const lb = document.createElement('span'); lb.className = 'lb'; lb.textContent = show(row.label);
+    const tk = document.createElement('button'); tk.type = 'button'; tk.className = 'tick';
+    tk.setAttribute('aria-label', (S.sel.has(row.key) ? 'Retirer ' : 'Sélectionner ') + show(row.label));
+    tk.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+    tk.addEventListener('click', (e) => { e.stopPropagation(); toggleSel(row.key); });
+    b.append(im, lb, tk);
+    const open = () => { openRow(row); setMsg(''); window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); };
+    b.addEventListener('click', open);
+    b.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+    return b;
+  }
+  function todoTile(w, c) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'tile todo'; b.setAttribute('aria-label', 'Créer ' + w);
+    b.innerHTML = '<span class="im">Créer</span><span class="lb"></span>';
+    b.querySelector('.lb').textContent = w;
+    b.addEventListener('click', () => { $('word').value = w; window.scrollTo({ top: 0 }); make(w); });
+    return b;
+  }
+  function toggleSel(key) {
+    if (S.sel.has(key)) S.sel.delete(key); else S.sel.add(key);
+    store.set('sel', Array.from(S.sel));
+    syncSelBtn(); render();
+  }
+  function syncSelBar() {
+    const n = Array.from(S.sel).filter((k) => S.bank.has(k)).length;
+    $('selbar').hidden = n === 0;
+    $('selN').textContent = n + ' image' + (n > 1 ? 's' : '') + ' sélectionnée' + (n > 1 ? 's' : '');
+  }
+  $('q').addEventListener('input', render);
+  $('son').addEventListener('input', render);
+  $('pos').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    S.pos = b.dataset.p; $('pos').querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); render();
+  });
+  $('selClear').addEventListener('click', () => { S.sel.clear(); store.set('sel', []); syncSelBtn(); render(); });
+
+  // ---------- Impression ----------
+  function seg(id, key, after) {
+    $(id).addEventListener('click', (e) => {
+      const b = e.target.closest('button'); if (!b) return;
+      S[key] = isNaN(+b.dataset.v) ? b.dataset.v : +b.dataset.v;
+      $(id).querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      if (after) after();
+    });
+  }
+  function selRows() { return Array.from(S.sel).map((k) => S.bank.get(k)).filter(Boolean).sort((a, b) => fold(a.label).localeCompare(fold(b.label), 'fr')); }
+  function updNote() {
+    const n = selRows().length;
+    $('pBoardsRow').hidden = S.kind !== 'loto';
+    let t = '';
+    if (S.kind === 'imagier') t = n + ' cartes, 12 par page.';
+    if (S.kind === 'memory') t = (n * 2) + ' cartes (chaque image en double), 20 par page.';
+    if (S.kind === 'loto') t = n < 4 ? 'Il faut au moins 4 images pour un loto.' : S.boards + ' planches de ' + (n >= 9 ? 9 : 4) + ' cases, plus les cartes à tirer.';
+    $('pNote').textContent = t;
+    $('pGo').disabled = !n || (S.kind === 'loto' && n < 4);
+  }
+  seg('pKind', 'kind', updNote); seg('pWord', 'wordMode'); seg('pBoards', 'boards', updNote);
+  function openSheet() { updNote(); $('sheet').hidden = false; void $('sheet').offsetWidth; $('sheet').classList.add('open'); $('pGo').focus(); }
+  function closeSheet() { $('sheet').classList.remove('open'); setTimeout(() => { if (!$('sheet').classList.contains('open')) $('sheet').hidden = true; }, 440); }
+  $('selPrint').addEventListener('click', openSheet);
+  $('scrim').addEventListener('click', closeSheet);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('sheet').hidden) closeSheet(); });
+
+  function card(row) {
+    const d = document.createElement('div'); d.className = 'pc';
+    const im = new Image(); im.src = url(row) + '?v=' + row.v; im.alt = '';
+    d.append(im);
+    if (S.wordMode !== 'none') { const b = document.createElement('b'); const w = show(row.label); b.textContent = S.wordMode === 'maj' ? w.toUpperCase() : w; d.append(b); }
+    return d;
+  }
+  function page(cols, rows, cards) {
+    const p = document.createElement('section'); p.className = 'page';
+    p.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
+    p.style.gridTemplateRows = 'repeat(' + rows + ', 1fr)';
+    cards.forEach((c) => p.append(c));
+    return p;
+  }
+  function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+  async function doPrint() {
+    const rows = selRows(), out = $('print');
+    out.innerHTML = '';
+    const pages = (list, cols, nrows) => { for (let i = 0; i < list.length; i += cols * nrows) out.append(page(cols, nrows, list.slice(i, i + cols * nrows).map(card))); };
+    if (S.kind === 'imagier') pages(rows, 3, 4);
+    if (S.kind === 'memory') pages(rows.flatMap((r) => [r, r]), 4, 5);
+    if (S.kind === 'loto') {
+      const size = rows.length >= 9 ? 3 : 2;
+      for (let b = 0; b < S.boards; b++) {
+        const p = document.createElement('section'); p.className = 'page';
+        const h = document.createElement('p'); h.className = 'ptitle'; h.textContent = 'Loto · planche ' + (b + 1);
+        const g = document.createElement('div'); g.className = 'board';
+        g.style.gridTemplateColumns = 'repeat(' + size + ', 1fr)'; g.style.height = '250mm';
+        shuffle(rows).slice(0, size * size).forEach((r) => g.append(card(r)));
+        p.append(h, g); out.append(p);
+      }
+      pages(rows, 4, 5);
+    }
+    closeSheet();
+    await Promise.all(Array.from(out.querySelectorAll('img')).map((i) => i.decode ? i.decode().catch(() => {}) : null));
+    setTimeout(() => window.print(), 60);
+  }
+  $('pGo').addEventListener('click', doPrint);
+
+  // ---------- Démarrage ----------
+  S.sel = new Set(store.get('sel', []));
+  renderCats();
+  render();
+  loadBank();
+  loadQuota();
+})();
+</script>
+</body>
+</html>
