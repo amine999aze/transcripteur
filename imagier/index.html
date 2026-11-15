@@ -70,6 +70,13 @@ h2 { margin: 0; font: 700 22px/1.2 var(--font-display); letter-spacing: -0.015em
 .field::placeholder { color: var(--faint); }
 .make { display: flex; gap: 10px; }
 .make .field { flex: 1; }
+.daymeter { margin: 12px 4px 0; }
+.daymeter .bar { height: 6px; border-radius: 999px; background: var(--fill); overflow: hidden; }
+.daymeter .bar i { display: block; height: 100%; width: 0; border-radius: inherit; background: var(--green-fill); transition: width 0.5s var(--ease); }
+.daymeter.warn .bar i { background: #ff9f0a; }
+.daymeter.full .bar i { background: #ff453a; }
+.daymeter p { margin: 6px 0 0; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.daymeter.full p { color: var(--ink); font-weight: 600; }
 .note { margin: 8px 4px 0; font-size: 13px; color: var(--muted); }
 .coderow { display: flex; gap: 10px; margin-top: 10px; }
 .coderow .field { flex: 1; }
@@ -205,6 +212,10 @@ h2 { margin: 0; font: 700 22px/1.2 var(--font-display); letter-spacing: -0.015em
       <input class="field" id="code" type="password" placeholder="Code d'accès pour créer" autocomplete="off" enterkeyhint="go" aria-label="Code d'accès">
       <button class="btn" id="codeOk" type="button">Valider</button>
     </div>
+    <div class="daymeter" id="dayMeter" hidden>
+      <div class="bar" role="progressbar" aria-label="Images créées aujourd’hui" aria-valuemin="0" id="dayBarWrap"><i id="dayBar"></i></div>
+      <p id="dayText"></p>
+    </div>
     <p class="note">Si le mot existe déjà dans la banque, l'image s'affiche tout de suite. Créer une nouvelle image demande le code d'accès. Pour préciser le sens, ajoutez-le entre parenthèses : avocat (le fruit). Pour une action, écrivez qui fait quoi : « la poule pond un œuf », « le dauphin saute hors de l'eau ».</p>
     <p class="msg" id="msg" hidden></p>
     <div class="result" id="result" hidden>
@@ -339,15 +350,43 @@ h2 { margin: 0; font: 700 22px/1.2 var(--font-display); letter-spacing: -0.015em
   };
 
   function setMsg(t, kind) { const m = $('msg'); m.hidden = !t; m.textContent = t || ''; m.className = 'msg' + (kind ? ' ' + kind : ''); }
+  // Compteur du jour : images créées depuis minuit (UTC) et temps avant la remise à zéro.
+  let Q = null;
+  function fmtLeft(ms) {
+    const m = Math.max(1, Math.round(ms / 60000)), h = Math.floor(m / 60), mm = m % 60;
+    return h ? h + '\u00a0h\u00a0' + String(mm).padStart(2, '0') : mm + '\u00a0min';
+  }
+  function hourOf(iso) { const d = new Date(iso); return d.getHours() + '\u00a0h' + (d.getMinutes() ? String(d.getMinutes()).padStart(2, '0') : ''); }
+  function showDay() {
+    const q = $('quota'), box = $('dayMeter');
+    if (!Q) return;
+    if (!Q.ready) { q.textContent = 'Création bientôt active'; q.className = 'pill off'; box.hidden = true; return; }
+    if (Q.used >= Q.limit) { q.textContent = 'Plafond du mois atteint'; q.className = 'pill off'; box.hidden = true; return; }
+    const d = Q.day;
+    if (!d) { q.textContent = Q.used + ' / ' + Q.limit + ' ce mois-ci'; q.className = 'pill'; box.hidden = true; return; }
+    const left = Date.parse(d.reset) - Date.now();
+    if (left <= 0) { loadQuota(); return; }
+    const full = d.full || d.used >= d.limit;
+    const pct = full ? 100 : Math.min(100, Math.round((d.used / d.limit) * 100));
+    $('dayBar').style.width = pct + '%';
+    $('dayBarWrap').setAttribute('aria-valuemax', String(d.limit));
+    $('dayBarWrap').setAttribute('aria-valuenow', String(Math.min(d.used, d.limit)));
+    box.className = 'daymeter' + (full ? ' full' : pct >= 80 ? ' warn' : '');
+    $('dayText').textContent = full
+      ? 'Limite du jour atteinte. Elle revient dans ' + fmtLeft(left) + ', à ' + hourOf(d.reset) + '. Les images de la banque restent disponibles.'
+      : d.used + ' nouvelles images aujourd’hui sur environ ' + d.limit + ' · remise à zéro dans ' + fmtLeft(left) + ' (à ' + hourOf(d.reset) + ')';
+    box.hidden = false;
+    q.textContent = full ? 'Limite du jour atteinte' : d.used + ' / ' + d.limit + ' aujourd’hui';
+    q.className = 'pill' + (full ? ' off' : '');
+  }
   async function loadQuota() {
     try {
       const r = await fetch(FN, { headers: { apikey: PK } });
-      const d = await r.json();
-      const q = $('quota');
-      if (!d.ready) { q.textContent = 'Création bientôt active'; q.className = 'pill off'; }
-      else { q.textContent = d.used + ' / ' + d.limit + ' ce mois-ci'; q.className = 'pill' + (d.used >= d.limit ? ' off' : ''); }
+      Q = await r.json();
+      showDay();
     } catch (e) {}
   }
+  setInterval(showDay, 30000);
   async function loadBank() {
     try {
       const r = await fetch(SB + '/rest/v1/imagier_images?select=key,label,cat,path,v,updated_at&order=label.asc', { headers: { apikey: PK } });
@@ -372,6 +411,7 @@ h2 { margin: 0; font: 700 22px/1.2 var(--font-display); letter-spacing: -0.015em
       const r = await fetch(FN, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: PK }, body: JSON.stringify({ word, again: !!again, cat: catOf[key] || null, code: store.get('code', '') }) });
       const d = await r.json();
       if (d.needCode) { $('codeRow').hidden = false; setTimeout(() => $('code').focus(), 50); }
+      if (d.quota) loadQuota();
       if (!r.ok || !d.image) throw new Error(d.error || 'Erreur ' + r.status);
       $('codeRow').hidden = true;
       S.bank.set(d.image.key, d.image);
