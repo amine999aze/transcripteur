@@ -290,6 +290,10 @@ h2 { margin: 0; font: 700 22px/1.2 var(--font-display); letter-spacing: -0.015em
 
   // Suggestions de départ : mots courants en logopédie, par catégorie.
   const STARTER = {
+    'Noms': 'cartable, cahier, stylo, récréation, ballon, lit, clé, téléphone, ordinateur, pyjama, voiture, bus, vélo, chaussures, manteau, chapeau, bonnet, gâteau, eau, cadeau',
+    'Verbes': 'manger, boire, écrire, dessiner, regarder, donner, couper, jouer, courir, arriver',
+    'Adjectifs': 'fatigué, content, triste, grand, petit, chaud, froid, fort',
+    'Pronoms': 'je, il, elle, le, la, les, lui, leur, le mien, la mienne, les miennes',
     'Fruits et légumes': 'pomme, banane, poire, fraise, cerise, raisin, orange, citron, ananas, pastèque, carotte, tomate, salade, pomme de terre, petits pois, champignon',
     'Animaux': 'chat, chien, lapin, cheval, vache, cochon, mouton, poule, canard, souris, lion, éléphant, girafe, singe, poisson, oiseau, papillon, escargot, serpent, ours',
     'Maison': 'maison, porte, fenêtre, lit, chaise, table, lampe, clé, canapé, télévision, horloge, téléphone',
@@ -305,6 +309,10 @@ h2 { margin: 0; font: 700 22px/1.2 var(--font-display); letter-spacing: -0.015em
   const CATS = Object.keys(STARTER);
   const catOf = {};
   CATS.forEach((c) => STARTER[c].split(',').forEach((w) => { catOf[norm(w.trim())] = c; }));
+  // Un mot peut appartenir à plusieurs catégories (ex. « vélo » : Noms et Transports).
+  const inStarter = {};
+  CATS.forEach((c) => { inStarter[c] = new Set(STARTER[c].split(',').map((w) => norm(w.trim()))); });
+  const inCat = (row, c) => (row.cat || catOf[row.key] || '') === c || (inStarter[c] && inStarter[c].has(row.key));
 
   const $ = (id) => document.getElementById(id);
   const S = { bank: new Map(), sel: new Set(), cat: 'Tout', pos: 'any', cur: null, busy: false, kind: 'imagier', wordMode: 'min', boards: 4, armAgain: false };
@@ -421,17 +429,17 @@ h2 { margin: 0; font: 700 22px/1.2 var(--font-display); letter-spacing: -0.015em
     const grid = $('grid'); grid.innerHTML = '';
     const items = [];
     for (const row of S.bank.values()) {
-      const c = row.cat || catOf[row.key] || '';
-      if (S.cat === 'Sélection' ? !S.sel.has(row.key) : (S.cat !== 'Tout' && c !== S.cat)) continue;
+      if (S.cat === 'Sélection' ? !S.sel.has(row.key) : (S.cat !== 'Tout' && !inCat(row, S.cat))) continue;
       if (!matches(row.label)) continue;
       items.push({ row });
     }
     items.sort((a, b) => fold(a.row.label).localeCompare(fold(b.row.label), 'fr'));
-    const todo = [];
+    const todo = [], seen = new Set();
     if (S.cat !== 'Sélection') {
       (S.cat === 'Tout' ? CATS : [S.cat]).forEach((c) => STARTER[c].split(',').forEach((w) => {
         w = w.trim();
-        if (!S.bank.has(norm(w)) && matches(w)) todo.push({ w, c });
+        const k = norm(w);
+        if (!S.bank.has(k) && !seen.has(k) && matches(w)) { seen.add(k); todo.push({ w, c }); }
       }));
     }
     const frag = document.createDocumentFragment();
