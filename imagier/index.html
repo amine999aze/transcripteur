@@ -110,6 +110,8 @@ h2 { margin: 0; font: 700 22px/1.2 var(--font-display); letter-spacing: -0.015em
 }
 .tile.sel .tick { background: var(--green-fill); box-shadow: none; color: #fff; }
 .tile.sel .im { box-shadow: 0 0 0 3px var(--green-fill) inset; }
+.dayhead { grid-column: 1 / -1; margin: 6px 2px -4px; font: 600 13px/1.2 var(--font-ui); color: var(--muted); }
+.dayhead:first-child { margin-top: 0; }
 .empty { grid-column: 1 / -1; padding: 24px 8px; text-align: center; color: var(--muted); font-size: 15px; }
 
 .selbar {
@@ -427,24 +429,36 @@ h2 { margin: 0; font: 700 22px/1.2 var(--font-display); letter-spacing: -0.015em
   }
   function renderCats() {
     const box = $('cats'); box.innerHTML = '';
-    ['Tout', 'Sélection'].concat(CATS).forEach((c) => {
+    ['Tout', 'Récentes', 'Sélection'].concat(CATS).forEach((c) => {
       const b = document.createElement('button');
       b.type = 'button'; b.className = 'chip'; b.textContent = c; b.setAttribute('aria-pressed', String(S.cat === c));
       b.addEventListener('click', () => { S.cat = c; renderCats(); render(); });
       box.append(b);
     });
   }
+  // « Récentes » : les dernières images créées ou refaites, groupées par jour.
+  function dayLabel(iso) {
+    const d = new Date(iso), now = new Date();
+    const day = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+    const diff = Math.round((day(now) - day(d)) / 86400000);
+    if (diff === 0) return 'Aujourd’hui';
+    if (diff === 1) return 'Hier';
+    const t = d.toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long' });
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  }
   function render() {
     const grid = $('grid'); grid.innerHTML = '';
-    const items = [];
+    const recent = S.cat === 'Récentes';
+    let items = [];
     for (const row of S.bank.values()) {
-      if (S.cat === 'Sélection' ? !S.sel.has(row.key) : (S.cat !== 'Tout' && !inCat(row, S.cat))) continue;
+      if (S.cat === 'Sélection' ? !S.sel.has(row.key) : (S.cat !== 'Tout' && !recent && !inCat(row, S.cat))) continue;
       if (!matches(row.label)) continue;
       items.push({ row });
     }
-    items.sort((a, b) => fold(a.row.label).localeCompare(fold(b.row.label), 'fr'));
+    if (recent) items = items.filter((it) => it.row.updated_at).sort((a, b) => String(b.row.updated_at).localeCompare(String(a.row.updated_at))).slice(0, 60);
+    else items.sort((a, b) => fold(a.row.label).localeCompare(fold(b.row.label), 'fr'));
     const todo = [], seen = new Set();
-    if (S.cat !== 'Sélection') {
+    if (S.cat !== 'Sélection' && !recent) {
       (S.cat === 'Tout' ? CATS : [S.cat]).forEach((c) => STARTER[c].split(',').forEach((w) => {
         w = w.trim();
         const k = norm(w);
@@ -452,11 +466,18 @@ h2 { margin: 0; font: 700 22px/1.2 var(--font-display); letter-spacing: -0.015em
       }));
     }
     const frag = document.createDocumentFragment();
-    for (const it of items) frag.append(tile(it.row));
+    let lastDay = '';
+    for (const it of items) {
+      if (recent) {
+        const l = dayLabel(it.row.updated_at);
+        if (l !== lastDay) { const h = document.createElement('p'); h.className = 'dayhead'; h.textContent = l; frag.append(h); lastDay = l; }
+      }
+      frag.append(tile(it.row));
+    }
     for (const t of todo) frag.append(todoTile(t.w, t.c));
     if (!items.length && !todo.length) {
       const e = document.createElement('p'); e.className = 'empty';
-      e.textContent = S.cat === 'Sélection' ? 'Aucune image sélectionnée. Touchez le rond d’une image pour l’ajouter.' : 'Aucun mot ne correspond. Tapez-le en haut pour le créer.';
+      e.textContent = S.cat === 'Sélection' ? 'Aucune image sélectionnée. Touchez le rond d’une image pour l’ajouter.' : recent ? 'Aucune image récente.' : 'Aucun mot ne correspond. Tapez-le en haut pour le créer.';
       frag.append(e);
     }
     grid.append(frag);
