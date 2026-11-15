@@ -77,6 +77,8 @@ h2 { margin: 0; font: 700 22px/1.2 var(--font-display); letter-spacing: -0.015em
 .daymeter.full .bar i { background: #ff453a; }
 .daymeter p { margin: 6px 0 0; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .daymeter.full p { color: var(--ink); font-weight: 600; }
+.daymeter.nobar .bar { display: none; }
+.daymeter.nobar p { margin-top: 0; }
 .note { margin: 8px 4px 0; font-size: 13px; color: var(--muted); }
 .coderow { display: flex; gap: 10px; margin-top: 10px; }
 .coderow .field { flex: 1; }
@@ -363,20 +365,31 @@ h2 { margin: 0; font: 700 22px/1.2 var(--font-display); letter-spacing: -0.015em
     if (!Q.ready) { q.textContent = 'Création bientôt active'; q.className = 'pill off'; box.hidden = true; return; }
     if (Q.used >= Q.limit) { q.textContent = 'Plafond du mois atteint'; q.className = 'pill off'; box.hidden = true; return; }
     const d = Q.day;
-    if (!d) { q.textContent = Q.used + ' / ' + Q.limit + ' ce mois-ci'; q.className = 'pill'; box.hidden = true; return; }
+    if (!d) { q.textContent = Q.used + ' ce mois-ci'; q.className = 'pill'; box.hidden = true; return; }
     const left = Date.parse(d.reset) - Date.now();
     if (left <= 0) { loadQuota(); return; }
-    const full = d.full || d.used >= d.limit;
-    const pct = full ? 100 : Math.min(100, Math.round((d.used / d.limit) * 100));
+    const full = !!d.full, real = d.source === 'cloudflare';
+    const when = fmtLeft(left) + ' (à ' + hourOf(d.reset) + ')';
+    let pct = 100, text, pill;
+    if (full) {
+      text = 'Limite du jour atteinte. Elle revient dans ' + fmtLeft(left) + ', à ' + hourOf(d.reset) + '. Les images de la banque restent disponibles.';
+      pill = 'Limite du jour atteinte';
+    } else if (real) {
+      // Chiffre réel lu chez Cloudflare : part du quota gratuit déjà utilisée aujourd'hui.
+      pct = Math.min(100, Math.round((d.neurons / d.neuronsLimit) * 100));
+      text = 'Quota du jour utilisé à ' + pct + ' % · encore environ ' + d.left + ' image' + (d.left > 1 ? 's' : '') + ' · remise à zéro dans ' + when;
+      pill = '≈ ' + d.left + ' restante' + (d.left > 1 ? 's' : '');
+    } else {
+      text = d.used + ' nouvelle' + (d.used > 1 ? 's' : '') + ' image' + (d.used > 1 ? 's' : '') + ' aujourd’hui · remise à zéro dans ' + when;
+      pill = d.used + ' aujourd’hui';
+    }
     $('dayBar').style.width = pct + '%';
-    $('dayBarWrap').setAttribute('aria-valuemax', String(d.limit));
-    $('dayBarWrap').setAttribute('aria-valuenow', String(Math.min(d.used, d.limit)));
-    box.className = 'daymeter' + (full ? ' full' : pct >= 80 ? ' warn' : '');
-    $('dayText').textContent = full
-      ? 'Limite du jour atteinte. Elle revient dans ' + fmtLeft(left) + ', à ' + hourOf(d.reset) + '. Les images de la banque restent disponibles.'
-      : d.used + ' nouvelles images aujourd’hui sur environ ' + d.limit + ' · remise à zéro dans ' + fmtLeft(left) + ' (à ' + hourOf(d.reset) + ')';
+    $('dayBarWrap').setAttribute('aria-valuemax', '100');
+    $('dayBarWrap').setAttribute('aria-valuenow', String(pct));
+    box.className = 'daymeter' + (full ? ' full' : !real ? ' nobar' : pct >= 80 ? ' warn' : '');
+    $('dayText').textContent = text;
     box.hidden = false;
-    q.textContent = full ? 'Limite du jour atteinte' : d.used + ' / ' + d.limit + ' aujourd’hui';
+    q.textContent = pill;
     q.className = 'pill' + (full ? ' off' : '');
   }
   async function loadQuota() {
