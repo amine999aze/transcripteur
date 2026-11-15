@@ -162,7 +162,7 @@ h2 { margin: 0; font: 700 22px/1.2 var(--font-display); letter-spacing: -0.015em
   .page:last-child { break-after: auto; page-break-after: auto; }
   .pc { border: 0.4mm dashed #999; border-radius: 3mm; display: grid; grid-template-rows: minmax(0, 1fr) auto; padding: 2mm; overflow: hidden; }
   .pc img { width: 100%; height: 100%; object-fit: contain; min-height: 0; }
-  .pc b { font: 700 6.5mm/1.1 var(--font-card); text-align: center; padding-top: 1mm; }
+  .pc b { font: 700 var(--wf, 6.5mm)/1.1 var(--font-card); text-align: center; padding-top: 1mm; }
   .board { border: 0.6mm solid #333; border-radius: 4mm; padding: 4mm; display: grid; gap: 2mm; }
   .board .pc { border-style: solid; border-color: #bbb; }
   .ptitle { font: 700 5mm/1 var(--font-card); margin: 0 0 2mm; }
@@ -264,6 +264,15 @@ h2 { margin: 0; font: 700 22px/1.2 var(--font-display); letter-spacing: -0.015em
         <button type="button" data-v="min" aria-pressed="true">minuscules</button>
         <button type="button" data-v="maj" aria-pressed="false">MAJUSCULES</button>
         <button type="button" data-v="none" aria-pressed="false">Sans mot</button>
+      </div>
+    </div>
+    <div class="opt" id="pPerRow"><span>Cartes par page</span>
+      <div class="segctl" id="pPer" role="group" aria-label="Cartes par page">
+        <button type="button" data-v="4" aria-pressed="false">4</button>
+        <button type="button" data-v="6" aria-pressed="false">6</button>
+        <button type="button" data-v="9" aria-pressed="false">9</button>
+        <button type="button" data-v="12" aria-pressed="true">12</button>
+        <button type="button" data-v="20" aria-pressed="false">20</button>
       </div>
     </div>
     <div class="opt" id="pBoardsRow" hidden><span>Planches de loto</span>
@@ -513,13 +522,19 @@ h2 { margin: 0; font: 700 22px/1.2 var(--font-display); letter-spacing: -0.015em
     const n = selRows().length;
     $('pBoardsRow').hidden = S.kind !== 'loto';
     let t = '';
-    if (S.kind === 'imagier') t = n + ' cartes, 12 par page.';
-    if (S.kind === 'memory') t = (n * 2) + ' cartes (chaque image en double), 20 par page.';
+    $('pPerRow').hidden = S.kind === 'loto';
+    $('pPer').querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(+x.dataset.v === S.per)));
+    if (S.kind === 'imagier') t = n + ' cartes, ' + S.per + ' par page.';
+    if (S.kind === 'memory') t = (n * 2) + ' cartes (chaque image en double), ' + S.per + ' par page.';
     if (S.kind === 'loto') t = n < 4 ? 'Il faut au moins 4 images pour un loto.' : S.boards + ' planches de ' + (n >= 9 ? 9 : 4) + ' cases, plus les cartes à tirer.';
     $('pNote').textContent = t;
     $('pGo').disabled = !n || (S.kind === 'loto' && n < 4);
   }
   seg('pKind', 'kind', updNote); seg('pWord', 'wordMode'); seg('pBoards', 'boards', updNote);
+  S.per = store.get('per', 12);
+  seg('pPer', 'per', () => { store.set('per', S.per); updNote(); });
+  // Cartes par page : colonnes × lignes, et taille du mot adaptée à la carte.
+  const LAYOUT = { 4: [2, 2, '11mm'], 6: [2, 3, '9mm'], 9: [3, 3, '8mm'], 12: [3, 4, '6.5mm'], 20: [4, 5, '5mm'] };
   function openSheet() { updNote(); $('sheet').hidden = false; void $('sheet').offsetWidth; $('sheet').classList.add('open'); $('pGo').focus(); }
   function closeSheet() { $('sheet').classList.remove('open'); setTimeout(() => { if (!$('sheet').classList.contains('open')) $('sheet').hidden = true; }, 440); }
   $('selPrint').addEventListener('click', openSheet);
@@ -533,8 +548,9 @@ h2 { margin: 0; font: 700 22px/1.2 var(--font-display); letter-spacing: -0.015em
     if (S.wordMode !== 'none') { const b = document.createElement('b'); const w = show(row.label); b.textContent = S.wordMode === 'maj' ? w.toUpperCase() : w; d.append(b); }
     return d;
   }
-  function page(cols, rows, cards) {
+  function page(cols, rows, cards, wf) {
     const p = document.createElement('section'); p.className = 'page';
+    if (wf) p.style.setProperty('--wf', wf);
     p.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
     p.style.gridTemplateRows = 'repeat(' + rows + ', 1fr)';
     cards.forEach((c) => p.append(c));
@@ -544,9 +560,10 @@ h2 { margin: 0; font: 700 22px/1.2 var(--font-display); letter-spacing: -0.015em
   async function doPrint() {
     const rows = selRows(), out = $('print');
     out.innerHTML = '';
-    const pages = (list, cols, nrows) => { for (let i = 0; i < list.length; i += cols * nrows) out.append(page(cols, nrows, list.slice(i, i + cols * nrows).map(card))); };
-    if (S.kind === 'imagier') pages(rows, 3, 4);
-    if (S.kind === 'memory') pages(rows.flatMap((r) => [r, r]), 4, 5);
+    const pages = (list, cols, nrows, wf) => { for (let i = 0; i < list.length; i += cols * nrows) out.append(page(cols, nrows, list.slice(i, i + cols * nrows).map(card), wf)); };
+    const L = LAYOUT[S.per] || LAYOUT[12];
+    if (S.kind === 'imagier') pages(rows, L[0], L[1], L[2]);
+    if (S.kind === 'memory') pages(rows.flatMap((r) => [r, r]), L[0], L[1], L[2]);
     if (S.kind === 'loto') {
       const size = rows.length >= 9 ? 3 : 2;
       for (let b = 0; b < S.boards; b++) {
